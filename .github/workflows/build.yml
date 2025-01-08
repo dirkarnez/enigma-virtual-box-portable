@@ -1,0 +1,55 @@
+name: portable-release-actions-workflow
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'c*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      
+permissions:
+  contents: write
+  
+jobs:
+  build:
+    name: Create Release
+    runs-on: windows-latest
+    env:
+      targetZip: enigma-virtual-box-portable-${{ github.ref_name }}.zip
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: installer
+        shell: cmd
+        run: |
+          curl https://enigmaprotector.com/assets/files/enigmavb.exe -L -O &&^
+          dir
+          
+      - name: uncompress 
+        shell: cmd
+        run: .\enigmavb.exe /VERYSILENT /CU /DIR=123
+
+      - name: remove junk
+        shell: cmd
+        run: |
+          cd installation\ &&^
+          del /s /q unins000.dat &&^
+          del /s /q unins000.exe &&^
+          del /s /q unins000.msg &&^
+          dir
+          
+      # - shell: cmd
+      #   run: xcopy /H /Y /C "WeChat.exe.Portable.cmd" "installation"
+          
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: 'zip'
+          directory: "installation"
+          filename: "${{ env.targetZip }}"
+          
+      - name: Release prebuilt
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "installation/${{ env.targetZip }}"
+          allowUpdates: true
+          token: ${{ secrets.GITHUB_TOKEN }}
